@@ -1,7 +1,8 @@
 const documentValidationService = require("../services/DocumentsValidationsService");
+const { generateSignedUrl } = require("../services/s3Service");
 const AWS = require("aws-sdk");
 
-// Configuración S3 para Wasabi
+// Configuración S3 para eliminar archivos
 const s3 = new AWS.S3({
   accessKeyId: process.env.WASABI_ACCESS_KEY,
   secretAccessKey: process.env.WASABI_SECRET_KEY,
@@ -40,7 +41,7 @@ class DocumentValidationController {
 
   async validate(req, res, promptFunction, tipoValidacion) {
     try {
-      if (!req.file || !req.file.location || !req.file.key) {
+      if (!req.file || !req.file.key) {
         return res.status(400).json({
           error: "No se proporcionó ningún archivo",
           message: "Debes subir un archivo PDF",
@@ -57,8 +58,11 @@ class DocumentValidationController {
           ? promptFunction(name)
           : promptFunction());
 
+      // 🔐 Generar URL firmada con el key
+      const signedUrl = await generateSignedUrl(req.file.key);
+
       const rawResponse = await documentValidationService.generateDocumentAnalysisFromUrl(
-        req.file.location,
+        signedUrl,
         prompt
       );
 
