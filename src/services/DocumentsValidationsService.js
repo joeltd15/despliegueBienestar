@@ -3,8 +3,7 @@ const axios = require("axios");
 
 class DocumentValidationService {
   constructor() {
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    this.genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    this.genAI = new GoogleGenerativeAI("AIzaSyAXTfeMLSniHiI9IEZ7TwbfWUGySbRqUNk");
   }
 
   async generateDocumentAnalysisFromUrl(fileUrl, prompt) {
