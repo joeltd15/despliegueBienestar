@@ -33,7 +33,13 @@ class DocumentValidationController {
 
       const name = req.body.name;
       const document = req.body.document;
-      const prompt = req.body.prompt || promptFunction(name, document);
+
+      const prompt = req.body.prompt ||
+        (promptFunction.length === 2
+          ? promptFunction(name, document)
+          : promptFunction.length === 1
+          ? promptFunction(name)
+          : promptFunction());
 
       const rawResponse = await documentValidationService.generateDocumentAnalysisFromUrl(
         req.file.location,
@@ -42,6 +48,7 @@ class DocumentValidationController {
 
       const jsonResponse = documentValidationService.processJsonResponse(rawResponse);
 
+      // Si la validación falla, eliminamos el archivo de Wasabi
       if (jsonResponse.result === false) {
         await deleteFileFromWasabi(req.file.key);
       }
@@ -75,11 +82,11 @@ class DocumentValidationController {
   }
 
   validatecommitmentletter(req, res) {
-    this.validate(req, res, documentValidationService.generatecommitmentletterPrompt, "Carta compromiso");
+    this.validate(req, res, () => documentValidationService.generatecommitmentletterPrompt(), "Carta compromiso");
   }
 
   validateformatsocioeconomic(req, res) {
-    this.validate(req, res, documentValidationService.generateformatsocioeconomicPrompt, "Formato socioeconómico");
+    this.validate(req, res, () => documentValidationService.generateformatsocioeconomicPrompt(), "Formato socioeconómico");
   }
 
   validatedisability(req, res) {
