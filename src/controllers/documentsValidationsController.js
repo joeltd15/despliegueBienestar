@@ -22,6 +22,22 @@ const deleteFileFromWasabi = async (key) => {
 };
 
 class DocumentValidationController {
+  constructor() {
+    this.validateIdentity = this.validateIdentity.bind(this);
+    this.validateCertifyBank = this.validateCertifyBank.bind(this);
+    this.validateCertifySisben = this.validateCertifySisben.bind(this);
+    this.validatecommitmentletter = this.validatecommitmentletter.bind(this);
+    this.validateformatsocioeconomic = this.validateformatsocioeconomic.bind(this);
+    this.validatedisability = this.validatedisability.bind(this);
+    this.validatenarp = this.validatenarp.bind(this);
+    this.validatepeasant = this.validatepeasant.bind(this);
+    this.validateregistrycivil = this.validateregistrycivil.bind(this);
+    this.validatevictimconflict = this.validatevictimconflict.bind(this);
+    this.validatepregnant = this.validatepregnant.bind(this);
+    this.validatenaturalphenomena = this.validatenaturalphenomena.bind(this);
+    this.validateQualificationsCertificate = this.validateQualificationsCertificate.bind(this);
+  }
+
   async validate(req, res, promptFunction, tipoValidacion) {
     try {
       if (!req.file || !req.file.location || !req.file.key) {
@@ -48,7 +64,6 @@ class DocumentValidationController {
 
       const jsonResponse = documentValidationService.processJsonResponse(rawResponse);
 
-      // Si la validación falla, eliminamos el archivo de Wasabi
       if (jsonResponse.result === false) {
         await deleteFileFromWasabi(req.file.key);
       }
