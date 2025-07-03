@@ -30,17 +30,24 @@ class DocumentValidationService {
   }
 
   processJsonResponse(rawResponse) {
-    try {
-      const jsonString = rawResponse.replace(/```json\\n?|```/g, "").trim();
-      return JSON.parse(jsonString);
-    } catch (e) {
-      console.error("Error al parsear JSON:", e);
-      return {
-        error: "La respuesta no es un JSON válido.",
-        valorOriginal: rawResponse,
-      };
-    }
+  try {
+    // Buscar bloque tipo ```json ... ```
+    const blockMatch = rawResponse.match(/```json\s*([\s\S]*?)\s*```/i);
+    const jsonString = blockMatch
+      ? blockMatch[1]
+      : rawResponse;
+
+    return JSON.parse(jsonString.trim());
+  } catch (e) {
+    console.error("Error al parsear JSON:", e);
+    return {
+      result: false,
+      error: "La respuesta no es un JSON válido.",
+      valorOriginal: rawResponse,
+    };
   }
+}
+
 
   generateIdentityPrompt(name) {
     return `Analiza cuidadosamente el contenido del documento proporcionado. Solo debe considerarse válido si es un **documento de identidad oficial** de una persona, específicamente uno de los siguientes tipos:
