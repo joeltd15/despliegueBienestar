@@ -36,24 +36,29 @@ const getPdfPathsById = async (id) => {
     "peasantCertificate",
     "bankCertificatePdf",
     "commitmentAct",
-  ]
+  ];
 
-  const pdfPaths = []
+  const pdfPaths = [];
+
+  const wasabiUrlPrefix = `https://${process.env.WASABI_BUCKET}.${process.env.WASABI_ENDPOINT}/`;
 
   pdfFields.forEach((field) => {
     if (infoCall[field]) {
+      const fullUrl = infoCall[field];
+      const key = fullUrl.replace(wasabiUrlPrefix, "");
       pdfPaths.push({
         name: field,
-        path: infoCall[field],
-      })
+        key,
+      });
     }
-  })
+  });
 
   return {
     infoCall,
     pdfPaths,
-  }
-}
+  };
+};
+
 
 module.exports = {
   createInfoCall,

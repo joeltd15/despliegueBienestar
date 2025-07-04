@@ -1,7 +1,6 @@
 const infoCallRepository = require('../repositories/infoCallRepository');
-const { PDFDocument } = require("pdf-lib")
-const fs = require("fs").promises
-const path = require("path")
+const { PDFDocument } = require("pdf-lib");
+const AWS = require("aws-sdk");
 
 const createInfoCall = async (data) => {
   return await infoCallRepository.createInfoCall(data);
@@ -19,62 +18,76 @@ const deleteInfoCall = async (id) => {
   return await infoCallRepository.deleteInfoCall(id);
 };
 
+// Configuración de conexión a Wasabi S3
+const s3 = new AWS.S3({
+  accessKeyId: process.env.WASABI_ACCESS_KEY,
+  secretAccessKey: process.env.WASABI_SECRET_KEY,
+  endpoint: process.env.WASABI_ENDPOINT,
+  region: process.env.WASABI_REGION,
+});
+
+// Obtener el buffer del archivo PDF desde Wasabi
+const getPdfBufferFromWasabi = async (key) => {
+  const params = {
+    Bucket: process.env.WASABI_BUCKET,
+    Key: key,
+  };
+  const data = await s3.getObject(params).promise();
+  return data.Body;
+};
+
 const mergePdfsById = async (id) => {
   try {
-    const result = await infoCallRepository.getPdfPathsById(id)
+    const result = await infoCallRepository.getPdfPathsById(id);
 
     if (!result) {
-      throw new Error("registro no encontrado")
+      throw new Error("registro no encontrado");
     }
 
-    const { infoCall, pdfPaths } = result
+    const { infoCall, pdfPaths } = result;
 
     if (pdfPaths.length === 0) {
-      throw new Error("No hay documentos PDF en este registro")
+      throw new Error("No hay documentos PDF en este registro");
     }
 
-    const mergedPdf = await PDFDocument.create()
+    const mergedPdf = await PDFDocument.create();
 
-    // Procesar cada archivo PDF
     for (const pdfInfo of pdfPaths) {
       try {
-        // Leer el archivo PDF
-        const pdfBytes = await fs.readFile(pdfInfo.path)
+        // Obtener el archivo desde Wasabi por key
+        const pdfBytes = await getPdfBufferFromWasabi(pdfInfo.key);
 
-        // Cargar el PDF
-        const pdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true })
-
-        const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices())
+        const pdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+        const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
 
         pages.forEach((page) => {
-          mergedPdf.addPage(page)
-        })
+          mergedPdf.addPage(page);
+        });
       } catch (fileError) {
-        console.warn(`Error processing file ${pdfInfo.name}: ${fileError.message}`)
+        console.warn(`Error al procesar archivo ${pdfInfo.name}: ${fileError.message}`);
       }
     }
 
     if (mergedPdf.getPageCount() === 0) {
-      throw new Error("No valid PDF files could be processed")
+      throw new Error("No se pudo procesar ningún archivo PDF válido");
     }
 
-    const mergedPdfBytes = await mergedPdf.save()
+    const mergedPdfBytes = await mergedPdf.save();
 
     return {
       pdfBuffer: mergedPdfBytes,
       fileName: `${infoCall.fullName.replace(/\s+/g, "_")}_documentos_completos.pdf`,
       infoCall,
-    }
+    };
   } catch (error) {
-    throw new Error(`Error merging PDFs: ${error.message}`)
+    throw new Error(`Error al unir PDFs: ${error.message}`);
   }
-}
-
+};
 
 module.exports = {
   createInfoCall,
   getAllInfoCalls,
   getInfoCallById,
   deleteInfoCall,
-  mergePdfsById
+  mergePdfsById,
 };
