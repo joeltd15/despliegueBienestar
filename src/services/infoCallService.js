@@ -1,6 +1,7 @@
 const infoCallRepository = require('../repositories/infoCallRepository');
 const { PDFDocument } = require("pdf-lib");
 const AWS = require("aws-sdk");
+const { generateSignedUrl } = require("../services/s3Service"); // importa aquí
 
 const createInfoCall = async (data) => {
   return await infoCallRepository.createInfoCall(data);
@@ -11,8 +12,37 @@ const getAllInfoCalls = async () => {
 };
 
 const getInfoCallById = async (id) => {
-  return await infoCallRepository.getInfoCallById(id);
+  const infoCall = await infoCallRepository.getInfoCallById(id);
+
+  if (!infoCall) return null;
+
+  const fieldsToSign = [
+    "idDocumentPdf",
+    "qualificationsCertificate",
+    "sisbenCertificate",
+    "bankCertificatePdf",
+    "commitmentAct",
+    "socioeconomicStudy",
+    "quartersCertificate",
+  ];
+
+  const signedInfo = { ...infoCall._doc };
+
+  for (const field of fieldsToSign) {
+    const originalUrl = signedInfo[field];
+    if (originalUrl) {
+      try {
+        const key = decodeURIComponent(originalUrl.split("/").pop());
+        signedInfo[field] = await generateSignedUrl(key);
+      } catch (error) {
+        console.warn(`⚠️ No se pudo firmar el campo ${field}: ${error.message}`);
+      }
+    }
+  }
+
+  return signedInfo;
 };
+
 
 const deleteInfoCall = async (id) => {
   return await infoCallRepository.deleteInfoCall(id);
