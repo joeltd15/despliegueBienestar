@@ -1,5 +1,6 @@
 
 const InfoCall = require('../models/infoCall');
+const { URL } = require("url");
 
 const createInfoCall = async (data) => {
   const infoCall = new InfoCall(data);
@@ -19,44 +20,37 @@ const deleteInfoCall = async (id) => {
 };
 
 const getPdfPathsById = async (id) => {
-  const infoCall = await InfoCall.findById(id)
-  if (!infoCall) return null
+  const infoCall = await InfoCall.findById(id);
+  if (!infoCall) return null;
 
   const pdfFields = [
-    "socioeconomicStudy",
-    "qualificationsCertificate",
     "idDocumentPdf",
+    "qualificationsCertificate",
+    "socioeconomicStudy",
     "sisbenCertificate",
-    "disabilityCertificate",
-    "communityCertificate",
-    "victimCertificate",
-    "singleParentCertificate",
-    "pregnancyCertificate",
-    "displacementCertificate",
-    "peasantCertificate",
     "bankCertificatePdf",
     "commitmentAct",
   ];
 
   const pdfPaths = [];
 
-  const wasabiUrlPrefix = `https://${process.env.WASABI_BUCKET}.${process.env.WASABI_ENDPOINT}/`;
-
   pdfFields.forEach((field) => {
     if (infoCall[field]) {
-      const fullUrl = infoCall[field];
-      const key = fullUrl.replace(wasabiUrlPrefix, "");
-      pdfPaths.push({
-        name: field,
-        key,
-      });
+      try {
+        const url = new URL(infoCall[field]);
+        const key = decodeURIComponent(url.pathname.substring(1)); // Elimina la barra inicial "/"
+
+        pdfPaths.push({
+          name: field,
+          key,
+        });
+      } catch (e) {
+        console.warn(`❌ URL inválida en campo ${field}: ${infoCall[field]}`);
+      }
     }
   });
 
-  return {
-    infoCall,
-    pdfPaths,
-  };
+  return { infoCall, pdfPaths };
 };
 
 
